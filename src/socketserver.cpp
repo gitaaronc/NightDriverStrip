@@ -1,4 +1,5 @@
 #include "globals.h"
+#include "nethelper.h"
 #include "systemcontainer.h"
 
 #if INCOMING_WIFI_ENABLED
@@ -76,12 +77,12 @@ bool SocketServer::ProcessIncomingConnectionsLoop()
 
         // Now that we have the header we can see how much more data is expected to follow
 
-        const uint32_t header  = _pBuffer[3] << 24  | _pBuffer[2] << 16  | _pBuffer[1] << 8  | _pBuffer[0];
+        const uint32_t header  =  ntohl(DWORDFromMemory(&_pBuffer.get()[0]));
         if (header == COMPRESSED_HEADER)
         {
-            uint32_t compressedSize = _pBuffer[7] << 24  | _pBuffer[6] << 16  | _pBuffer[5] << 8  | _pBuffer[4];
-            uint32_t expandedSize   = _pBuffer[11] << 24 | _pBuffer[10] << 16 | _pBuffer[9] << 8  | _pBuffer[8];
-            uint32_t reserved       = _pBuffer[15] << 24 | _pBuffer[14] << 16 | _pBuffer[13] << 8 | _pBuffer[12];
+            uint32_t compressedSize = ntohl(DWORDFromMemory(&_pBuffer.get()[4]));
+            uint32_t expandedSize   = ntohl(DWORDFromMemory(&_pBuffer.get()[8]));
+            uint32_t reserved       = ntohl(DWORDFromMemory(&_pBuffer.get()[12]));
             debugV("Compressed Header: compressedSize: %u, expandedSize: %u, reserved: %u", compressedSize, expandedSize, reserved);
 
             if (expandedSize > MAXIMUM_PACKET_SIZE)
@@ -127,16 +128,16 @@ bool SocketServer::ProcessIncomingConnectionsLoop()
         else
         {     
             // Read the rest of the data
-            uint16_t command16   = WORDFromMemory(&_pBuffer.get()[0]);
+            uint16_t command16   = ntohs(WORDFromMemory(&_pBuffer.get()[0]));
 
             if (command16 == WIFI_COMMAND_PEAKDATA)
             {
                 #if ENABLE_AUDIO
 
-                    uint16_t numbands  = WORDFromMemory(&_pBuffer.get()[2]);
-                    uint32_t length32  = DWORDFromMemory(&_pBuffer.get()[4]);
-                    uint64_t seconds   = ULONGFromMemory(&_pBuffer.get()[8]);
-                    uint64_t micros    = ULONGFromMemory(&_pBuffer.get()[16]);
+                uint16_t numbands  = ntohs(WORDFromMemory(&_pBuffer.get()[2]));
+                uint32_t length32  = ntohl(DWORDFromMemory(&_pBuffer.get()[4]));
+                uint64_t seconds   = be64toh(ULONGFromMemory(&_pBuffer.get()[8]));
+                uint64_t micros    = be64toh(ULONGFromMemory(&_pBuffer.get()[16]));
 
                     size_t totalExpected = STANDARD_DATA_HEADER_SIZE + length32;
 
@@ -174,10 +175,10 @@ bool SocketServer::ProcessIncomingConnectionsLoop()
             {
                 // We know it's pixel data, so we do some validation before calling Process.
 
-                uint16_t channel16 = WORDFromMemory(&_pBuffer.get()[2]);
-                uint32_t length32  = DWORDFromMemory(&_pBuffer.get()[4]);
-                uint64_t seconds   = ULONGFromMemory(&_pBuffer.get()[8]);
-                uint64_t micros    = ULONGFromMemory(&_pBuffer.get()[16]);
+                uint16_t channel16 = ntohs(WORDFromMemory(&_pBuffer.get()[2]));
+                uint32_t length32  = ntohl(DWORDFromMemory(&_pBuffer.get()[4]));
+                uint64_t seconds   = be64toh(ULONGFromMemory(&_pBuffer.get()[8]));
+                uint64_t micros    = be64toh(ULONGFromMemory(&_pBuffer.get()[16]));
 
                 debugV("Uncompressed Header: channel16=%u, length=%u, seconds=%llu, micro=%llu", channel16, length32, seconds, micros);
 
@@ -228,19 +229,19 @@ bool SocketServer::ProcessIncomingConnectionsLoop()
             auto& bufferManager = g_ptrSystem->BufferManagers()[0];
 
             SocketResponse response = {
-                                        .size = sizeof(SocketResponse),
-                                        .sequence     = sequence++,
-                                        .flashVersion = FLASH_VERSION,
-                                        .currentClock = g_Values.AppTime.CurrentTime(),
-                                        .oldestPacket = bufferManager.AgeOfOldestBuffer(),
-                                        .newestPacket = bufferManager.AgeOfNewestBuffer(),
-                                        .brightness   = g_Values.Brite,
-                                        .wifiSignal   = (float) WiFi.RSSI(),
-                                        .bufferSize   = bufferManager.BufferCount(),
-                                        .bufferPos    = bufferManager.Depth(),
-                                        .fpsDrawing   = g_Values.FPS,
-                                        .watts        = g_Values.Watts
-                                    };
+                .size = htonl(sizeof(SocketResponse)),
+                .sequence     = htobe64(sequence++),
+                .flashVersion = htonl(FLASH_VERSION),
+                .currentClock = htond(g_Values.AppTime.CurrentTime()),
+                .oldestPacket = htond(bufferManager.AgeOfOldestBuffer()),
+                .newestPacket = htond(bufferManager.AgeOfNewestBuffer()),
+                .brightness   = htond(static_cast<double>(g_Values.Brite)),
+                .wifiSignal   = htond(static_cast<double>(WiFi.RSSI())),
+                .bufferSize   = htonl(bufferManager.BufferCount()),
+                .bufferPos    = htonl(bufferManager.Depth()),
+                .fpsDrawing   = htonl(g_Values.FPS),
+                .watts        = htonl(g_Values.Watts)
+            };
 
             // I dont think this is fatal, and doesn't affect the read buffer, so content to ignore for now if it happens
             if (sizeof(response) != write(new_socket, &response, sizeof(response)))

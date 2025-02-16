@@ -37,7 +37,9 @@
 #include <memory>
 #include <iostream>
 #include <utility>
+
 #include "values.h"
+#include "nethelper.h"
 
 class LEDBuffer
 {
@@ -106,11 +108,11 @@ class LEDBuffer
             debugV("========");
         #endif
 
-        uint16_t command16 = WORDFromMemory(&payloadData[0]);
-        uint16_t channel16 = WORDFromMemory(&payloadData[2]);
-        uint32_t length32  = DWORDFromMemory(&payloadData[4]);
-        uint64_t seconds   = ULONGFromMemory(&payloadData[8]);
-        uint64_t micros    = ULONGFromMemory(&payloadData[16]);
+        uint16_t command16 = ntohs(WORDFromMemory(&payloadData[0]));
+        uint16_t channel16 = ntohs(WORDFromMemory(&payloadData[2]));
+        uint32_t length32  = ntohl(DWORDFromMemory(&payloadData[4]));
+        uint64_t seconds   = be64toh(ULONGFromMemory(&payloadData[8]));
+        uint64_t micros    = be64toh(ULONGFromMemory(&payloadData[16]));
 
         //printf("UpdateFromWire -- Command: %u, Channel: %d, Length: %u, Seconds: %u, Micros: %u\n", command16, channel16, length32, seconds, micros);
 

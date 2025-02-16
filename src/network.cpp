@@ -33,6 +33,7 @@
 #include <nvs.h>
 
 #include "globals.h"
+#include "nethelper.h"
 #include "ledviewer.h"                          // For the LEDViewer task and object
 #include "network.h"
 #include "systemcontainer.h"
@@ -458,7 +459,7 @@ bool ProcessIncomingData(std::unique_ptr<uint8_t []> & payloadData, size_t paylo
         return false;
     #else
 
-    uint16_t command16 = payloadData[1] << 8 | payloadData[0];
+    uint16_t command16 = ntohs(WORDFromMemory(&payloadData[0])); 
 
     debugV("payloadLength: %zu, command16: %d", payloadLength, command16);
 
@@ -469,10 +470,10 @@ bool ProcessIncomingData(std::unique_ptr<uint8_t []> & payloadData, size_t paylo
         case WIFI_COMMAND_PEAKDATA:
         {
             #if ENABLE_AUDIO
-                uint16_t numbands  = WORDFromMemory(&payloadData[2]);
-                uint32_t length32  = DWORDFromMemory(&payloadData[4]);
-                uint64_t seconds   = ULONGFromMemory(&payloadData[8]);
-                uint64_t micros    = ULONGFromMemory(&payloadData[16]);
+            uint16_t numbands  = ntohs(WORDFromMemory(&payloadData[2]));
+            uint32_t length32  = ntohl(DWORDFromMemory(&payloadData[4]));
+            uint64_t seconds   = b64toh(ULONGFromMemory(&payloadData[8]));
+            uint64_t micros    = b64toh(ULONGFromMemory(&payloadData[16]));
 
                 debugV("ProcessIncomingData -- Bands: %u, Length: %u, Seconds: %llu, Micros: %llu ... ",
                     numbands,
@@ -491,10 +492,10 @@ bool ProcessIncomingData(std::unique_ptr<uint8_t []> & payloadData, size_t paylo
 
         case WIFI_COMMAND_PIXELDATA64:
         {
-            uint16_t channel16 = WORDFromMemory(&payloadData[2]);
-            uint32_t length32  = DWORDFromMemory(&payloadData[4]);
-            uint64_t seconds   = ULONGFromMemory(&payloadData[8]);
-            uint64_t micros    = ULONGFromMemory(&payloadData[16]);
+            uint16_t channel16  = ntohs(WORDFromMemory(&payloadData[2]));
+            uint32_t length32  = ntohl(DWORDFromMemory(&payloadData[4]));
+            uint64_t seconds   = be64toh(ULONGFromMemory(&payloadData[8]));
+            uint64_t micros    = be64toh(ULONGFromMemory(&payloadData[16]));
 
             debugV("ProcessIncomingData -- Channel: %u, Length: %u, Seconds: %llu, Micros: %llu ... ",
                    channel16,
