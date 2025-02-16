@@ -25,7 +25,9 @@
 //
 //    Hosts a socket server on port 49152 to receive LED data from the master
 //
-// History:     Oct-26-2018     Davepl      Created
+// History:     
+//      Oct-26-2018     Davepl      Created
+//      Feb-15-2025         aaronc      + network byte ordering
 //---------------------------------------------------------------------------
 #pragma once
 

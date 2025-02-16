@@ -24,7 +24,9 @@
 //
 //    Network loop, remote control, debug loop, etc.
 //
-// History:     May-11-2021         Davepl      Commented
+// History:     
+//      May-11-2021         Davepl      Commented
+//      Feb-15-2025         aaronc      + network byte ordering
 //
 //---------------------------------------------------------------------------
 

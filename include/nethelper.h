@@ -1,3 +1,12 @@
+/*+==========================================================================
+  File:       nethelper.h
+  Description:
+    Helper functions to support converting to and from network byte order.
+  
+  History:     
+        Feb-15-2025     aaronc      Created
+==========================================================================+*/
+
 #ifndef _NETHELPER_H_
 #define _NETHELPER_H_
 
